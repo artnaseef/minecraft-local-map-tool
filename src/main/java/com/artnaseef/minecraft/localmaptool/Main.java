@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * Locations from https://help.mojang.com/customer/portal/articles/1480874-where-are-minecraft-files-stored-
+ *
  * Created by art on 6/27/2019.
  */
 public class Main {
@@ -24,15 +26,24 @@ public class Main {
         System.out.println("APP DATA = " + appData);
         System.out.println("USER HOME = " + userHome);
 
-        File windowsJavaSaveFolder = this.locateWindowsJavaSaveFolder();
         List<File> allMatches = new LinkedList<>();
         List<File> tempMatches;
 
+        File windowsJavaSaveFolder = this.locateWindowsJavaSaveFolder();
         if (windowsJavaSaveFolder != null) {
             tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsJavaSaveFolder);
             allMatches.addAll(tempMatches);
             for (File oneMatch : tempMatches) {
-                System.out.println("WIN MATCHED " + oneMatch);
+                System.out.println("WIN+JAVA MATCHED " + oneMatch);
+            }
+        }
+
+        File windowsNativeSaveFolder = this.locateWindowsNativeSaveFolder();
+        if (windowsNativeSaveFolder != null) {
+            tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsNativeSaveFolder);
+            allMatches.addAll(tempMatches);
+            for (File oneMatch : tempMatches) {
+                System.out.println("WIN+NATIVE MATCHED " + oneMatch);
             }
         }
 
@@ -42,6 +53,15 @@ public class Main {
             allMatches.addAll(tempMatches);
             for (File oneMatch : tempMatches) {
                 System.out.println("MAC MATCHED " + oneMatch);
+            }
+        }
+
+        File linuxJavaSaveFolder = this.locateLinuxJavaSaveFolder();
+        if (linuxJavaSaveFolder != null) {
+            tempMatches = this.minecraftMapDirectoryFinder.findMaps(linuxJavaSaveFolder);
+            allMatches.addAll(tempMatches);
+            for (File oneMatch : tempMatches) {
+                System.out.println("LINUX MATCHED " + oneMatch);
             }
         }
     }
@@ -57,12 +77,37 @@ public class Main {
         return null;
     }
 
+    private File locateWindowsNativeSaveFolder() {
+        String localAppData = System.getenv("LOCALAPPDATA");
+
+        // TODO: as yet, untested
+        // C:\Users\(your pc username)\AppData\Local\Packages\Microsoft.MinecraftUWP_8wekyb3d8bbwe\LocalState\games\com.mojang\
+        if ((localAppData != null) && (! localAppData.isEmpty())) {
+            File appDataDir = new File(localAppData);
+            return this.openDescendent(appDataDir, "Packages", "Microsoft.MinecraftUWP_8wekyb3d8bbwe",
+                    "LocalState", "games", "com.mojang", "saves");
+        }
+
+        return null;
+    }
+
     private File locateMacJavaSaveFolder() {
         String userHome = System.getProperty("user.home");
 
         if ((userHome != null) && (! userHome.isEmpty())) {
             File userHomeDir = new File(userHome);
             return this.openDescendent(userHomeDir, "Library", "Application Support", "minecraft", "saves");
+        }
+
+        return null;
+    }
+
+    private File locateLinuxJavaSaveFolder() {
+        String userHome = System.getProperty("user.home");
+
+        if ((userHome != null) && (! userHome.isEmpty())) {
+            File userHomeDir = new File(userHome);
+            return this.openDescendent(userHomeDir, ".minecraft", "saves");
         }
 
         return null;
