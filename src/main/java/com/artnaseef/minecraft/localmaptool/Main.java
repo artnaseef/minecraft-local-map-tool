@@ -26,9 +26,10 @@ public class Main {
 
         File windowsJavaSaveFolder = this.locateWindowsJavaSaveFolder();
         List<File> allMatches = new LinkedList<>();
-        List<File> tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsJavaSaveFolder);
+        List<File> tempMatches;
 
         if (windowsJavaSaveFolder != null) {
+            tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsJavaSaveFolder);
             allMatches.addAll(tempMatches);
             for (File oneMatch : tempMatches) {
                 System.out.println("WIN MATCHED " + oneMatch);
