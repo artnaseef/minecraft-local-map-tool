@@ -23,6 +23,19 @@
             <version>1.7.26</version>
         </dependency>
 
+        <dependency>
+            <groupId>net.lingala.zip4j</groupId>
+            <artifactId>zip4j</artifactId>
+            <version>2.0.2</version>
+        </dependency>
+
+        <!-- https://stackoverflow.com/questions/19049253/intellij-idea-gui-designer-maven -->
+        <dependency>
+            <groupId>com.intellij</groupId>
+            <artifactId>forms_rt</artifactId>
+            <version>7.0.3</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -48,6 +61,26 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+
+            <!-- This approach results in java.lang.ArrayIndexOutOfBoundsException error sadly. -->
+            <!--<plugin>-->
+                <!--<groupId>org.codehaus.mojo</groupId>-->
+                <!--<artifactId>ideauidesigner-maven-plugin</artifactId>-->
+                <!--<version>1.0-beta-1</version>-->
+                <!--<executions>-->
+                    <!--<execution>-->
+                        <!--<goals>-->
+                            <!--<goal>javac2</goal>-->
+                        <!--</goals>-->
+                    <!--</execution>-->
+                <!--</executions>-->
+
+                <!--<configuration>-->
+                    <!--<fork>true</fork>-->
+                    <!--<debug>true</debug>-->
+                    <!--<failOnError>true</failOnError>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
         </plugins>
     </build>
 </project>

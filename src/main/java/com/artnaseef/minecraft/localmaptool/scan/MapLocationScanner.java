@@ -3,6 +3,9 @@ package com.artnaseef.minecraft.localmaptool.scan;
 import com.artnaseef.minecraft.localmaptool.MinecraftEnvironmentType;
 import com.artnaseef.minecraft.localmaptool.util.MinecraftMapDirectoryFinder;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.util.*;
 import java.util.function.Consumer;
@@ -12,6 +15,10 @@ import java.util.function.Consumer;
  */
 public class MapLocationScanner {
 
+    private Logger DEFAULT_LOGGER = LoggerFactory.getLogger(MapLocationScanner.class);
+
+    private Logger log = DEFAULT_LOGGER;
+
     private MinecraftMapDirectoryFinder minecraftMapDirectoryFinder = new MinecraftMapDirectoryFinder();
 
     private List<File> allMatchedMaps = new LinkedList<>();
@@ -19,6 +26,16 @@ public class MapLocationScanner {
     private final Object matchedMapsSync = new Object();
 
     private Consumer<MapLocationScanner> onScanComplete;
+    private boolean hasRunInit = false;
+
+    private File linuxJavaSaveFolder;
+    private File macJavaSaveFolder;
+    private File windowsJavaSaveFolder;
+    private File windowsNativeSaveFolder;
+
+//========================================
+// Getters and Setters
+//----------------------------------------
 
     public Consumer<MapLocationScanner> getOnScanComplete() {
         return onScanComplete;
@@ -45,7 +62,45 @@ public class MapLocationScanner {
         }
     }
 
+    public File getLinuxJavaSaveFolder() {
+        return linuxJavaSaveFolder;
+    }
+
+    public File getMacJavaSaveFolder() {
+        return macJavaSaveFolder;
+    }
+
+    public File getWindowsJavaSaveFolder() {
+        return windowsJavaSaveFolder;
+    }
+
+    public File getWindowsNativeSaveFolder() {
+        return windowsNativeSaveFolder;
+    }
+
+//========================================
+// Lifecycle
+//----------------------------------------
+
+    public void init() {
+        String appData = System.getenv("APPDATA");
+        String userHome = System.getProperty("user.home");
+        System.out.println("APP DATA = " + appData);
+        System.out.println("USER HOME = " + userHome);
+
+        this.linuxJavaSaveFolder = this.locateLinuxJavaSaveFolder();
+        this.macJavaSaveFolder = this.locateMacJavaSaveFolder();
+        this.windowsJavaSaveFolder = this.locateWindowsJavaSaveFolder();
+        this.windowsNativeSaveFolder = this.locateWindowsNativeSaveFolder();
+    }
+
+
+//========================================
+// Operations
+//----------------------------------------
+
     public void executeScan() {
+        this.checkInit();
         String appData = System.getenv("APPDATA");
         String userHome = System.getProperty("user.home");
         System.out.println("APP DATA = " + appData);
@@ -55,52 +110,61 @@ public class MapLocationScanner {
             synchronized (this.allMatchedMaps) {
                 this.allMatchedMaps.clear();
             }
+
             List<File> tempMatches;
 
-            File windowsJavaSaveFolder = this.locateWindowsJavaSaveFolder();
-            if (windowsJavaSaveFolder != null) {
+            if (this.windowsJavaSaveFolder != null) {
                 tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsJavaSaveFolder);
                 this.addMatched(tempMatches);
                 this.setEnvironmentMatches(MinecraftEnvironmentType.WIN_JAVA, tempMatches);
                 for (File oneMatch : tempMatches) {
-                    System.out.println("WIN+JAVA MATCHED " + oneMatch);
+                    this.log.info("WIN+JAVA MATCHED {}", oneMatch);
                 }
             }
 
-            File windowsNativeSaveFolder = this.locateWindowsNativeSaveFolder();
-            if (windowsNativeSaveFolder != null) {
+            if (this.windowsNativeSaveFolder != null) {
                 tempMatches = this.minecraftMapDirectoryFinder.findMaps(windowsNativeSaveFolder);
                 this.addMatched(tempMatches);
                 this.setEnvironmentMatches(MinecraftEnvironmentType.WIN_NATIVE, tempMatches);
                 for (File oneMatch : tempMatches) {
-                    System.out.println("WIN+NATIVE MATCHED " + oneMatch);
+                    this.log.info("WIN+NATIVE MATCHED {}", oneMatch);
                 }
             }
 
-            File macJavaSaveFolder = this.locateMacJavaSaveFolder();
-            if (macJavaSaveFolder != null) {
+            if (this.macJavaSaveFolder != null) {
                 tempMatches = this.minecraftMapDirectoryFinder.findMaps(macJavaSaveFolder);
                 this.addMatched(tempMatches);
                 this.setEnvironmentMatches(MinecraftEnvironmentType.MAC, tempMatches);
                 for (File oneMatch : tempMatches) {
-                    System.out.println("MAC MATCHED " + oneMatch);
+                    this.log.info("MAC MATCHED {}", oneMatch);
                 }
             }
 
-            File linuxJavaSaveFolder = this.locateLinuxJavaSaveFolder();
-            if (linuxJavaSaveFolder != null) {
+            if (this.linuxJavaSaveFolder != null) {
                 tempMatches = this.minecraftMapDirectoryFinder.findMaps(linuxJavaSaveFolder);
                 this.addMatched(tempMatches);
                 this.setEnvironmentMatches(MinecraftEnvironmentType.LINUX, tempMatches);
                 for (File oneMatch : tempMatches) {
-                    System.out.println("LINUX MATCHED " + oneMatch);
+                    this.log.info("LINUX MATCHED {}", oneMatch);
                 }
             }
         } finally {
+            // Notify the listener that scanning is complete
             Consumer<MapLocationScanner> listener = this.onScanComplete;
             if (listener != null) {
                 listener.accept(this);
             }
+        }
+    }
+
+//========================================
+// Internals
+//----------------------------------------
+
+    private void checkInit() {
+        if (!this.hasRunInit) {
+            this.init();
+            this.hasRunInit = true;
         }
     }
 
