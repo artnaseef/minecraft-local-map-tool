@@ -10,6 +10,12 @@ import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.ZipParameters;
 
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Layout;
+import org.apache.log4j.PatternLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -17,12 +23,19 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
  * Created by art on 6/28/2019.
  */
 public class MainFormRunner {
+
+    public static final String DEFAULT_LOG_FILE_NAME = "minecraft-local-map-tool.log";
+
+    private static Logger DEFAULT_LOGGER = LoggerFactory.getLogger(MainFormRunner.class);
+
+    private Logger log = DEFAULT_LOGGER;
 
     private JLabel windowsJavaMapsLabel;
     private JList windowsJavaMapList;
@@ -95,6 +108,28 @@ public class MainFormRunner {
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Minecraft Local Map Tool");
+
+        // TODO: better command-line argument handling
+        if (args.length > 0) {
+            String logFileName = null;
+
+            if (args[0].startsWith("--logfile=")) {
+                logFileName = args[0].substring(10).trim();
+            } else if (args[0].startsWith("--log-to-file")) {
+                logFileName = DEFAULT_LOG_FILE_NAME;
+            }
+
+            if (!logFileName.isEmpty()) {
+                try {
+                    Layout layout = new PatternLayout("%d{ISO8601} %-5p [%t] %c - %m%n");
+                    FileAppender fileAppender = new FileAppender(layout, logFileName, true);
+                    org.apache.log4j.Logger.getRootLogger().addAppender(fileAppender);
+                } catch (IOException ioExc) {
+                    ioExc.printStackTrace();
+                    System.exit(3);
+                }
+            }
+        }
 
         MainFormRunner runner = new MainFormRunner();
         runner.init();
@@ -227,21 +262,35 @@ public class MainFormRunner {
             if (destinationResult == JFileChooser.APPROVE_OPTION) {
                 File destination = saveFolderChooser.getSelectedFile();
 
-                boolean doUnzip = true;
+                boolean doUnzip = false;
+
                 if (destination.exists()) {
                     String[] contents = destination.list();
                     if ((contents == null) || (contents.length == 0)) {
-
+                        // Empty destination; all good
+                        doUnzip = true;
                     } else {
                         // TODO: Verification dialog instead of guaranteed rejection
-                        System.out.println("UNZIP - rejected destination directory as it is not empty");
+                        int confirmResult =
+                            JOptionPane.showConfirmDialog(
+                                this.rootPanel,
+                                "Destination directory is not empty; existing contents will be overwritten and/or mixed with the new files.  Are you sure?",
+                                "Non-empty Destination Directory Confirmation", JOptionPane.YES_NO_OPTION
+                            );
+
+                        if (confirmResult == JOptionPane.YES_OPTION) {
+                            // Confirmed - continue with the unzip
+                            doUnzip = true;
+                        }
                     }
                 } else {
                     boolean created = destination.mkdir();
                     if (created) {
                         doUnzip = true;
                     } else {
-                        System.out.println("UNZIP - FAILED to mkdir for non-existent directory: " + destination);
+                        JOptionPane
+                            .showMessageDialog(this.rootPanel, "Failed to create destination directory", "Unzip Error",
+                                               JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
@@ -255,7 +304,12 @@ public class MainFormRunner {
                         // TODO: refresh the map list
                         this.startScan();
                     } catch (ZipException exc) {
-                        exc.printStackTrace();
+                        JOptionPane
+                            .showMessageDialog(this.rootPanel, "Error occured during the unzip process: " + exc.getMessage(),
+                                               "Unzip Error",
+                                               JOptionPane.ERROR_MESSAGE);
+
+                        this.log.error("Error during the unzip process", exc);
                     }
                 }
             }
@@ -304,7 +358,7 @@ public class MainFormRunner {
      */
     private void $$$setupUI$$$() {
         rootPanel = new JPanel();
-        rootPanel.setLayout(new GridLayoutManager(10, 4, new Insets(2, 2, 2, 2), -1, -1));
+        rootPanel.setLayout(new GridLayoutManager(14, 4, new Insets(2, 2, 2, 2), -1, -1));
         rootPanel.setMinimumSize(new Dimension(600, 400));
         rootPanel.setPreferredSize(new Dimension(600, 400));
         windowsJavaMapsLabel = new JLabel();
@@ -317,72 +371,43 @@ public class MainFormRunner {
         rootPanel.add(spacer1,
                       new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        windowsJavaMapList = new JList();
-        rootPanel.add(windowsJavaMapList,
-                      new GridConstraints(1, 0, 2, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-                                          GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_WANT_GROW,
-                                          null, new Dimension(150, 50), null, 0, false));
         windowsNativeMapsLabel = new JLabel();
         windowsNativeMapsLabel.setText("Windows Native Maps");
         rootPanel.add(windowsNativeMapsLabel,
-                      new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null,
                                           new Dimension(150, -1), null, 0, false));
-        windowsNativeMapList = new JList();
-        rootPanel.add(windowsNativeMapList,
-                      new GridConstraints(4, 0, 2, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-                                          GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_WANT_GROW,
-                                          null, new Dimension(150, 50), null, 0, false));
         closeButton = new JButton();
         closeButton.setText("Close");
         rootPanel.add(closeButton,
-                      new GridConstraints(9, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(13, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
                                           GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         scanButton = new JButton();
         scanButton.setText("Scan");
         rootPanel.add(scanButton,
-                      new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(13, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
                                           GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer2 = new Spacer();
         rootPanel.add(spacer2,
-                      new GridConstraints(9, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(13, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("Mac Maps");
-        rootPanel.add(label1, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
+        rootPanel.add(label1, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE,
                                                   GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED,
                                                   null, null, null, 0, false));
-        macMapList = new JList();
-        rootPanel.add(macMapList,
-                      new GridConstraints(7, 0, 2, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
-                                          GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_WANT_GROW,
-                                          null, new Dimension(150, 50), null, 0, false));
-        zipButton = new JButton();
-        zipButton.setText("Zip...");
-        zipButton.setToolTipText("Create a ZIP file for the selected map");
-        rootPanel.add(zipButton,
-                      new GridConstraints(7, 3, 1, 1, GridConstraints.ANCHOR_NORTH, GridConstraints.FILL_HORIZONTAL,
-                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
-                                          GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        unzipButton = new JButton();
-        unzipButton.setText("Unzip...");
-        unzipButton.setToolTipText("Install map from ZIP file into local saves (Mac)");
-        rootPanel.add(unzipButton,
-                      new GridConstraints(8, 3, 1, 1, GridConstraints.ANCHOR_NORTH, GridConstraints.FILL_HORIZONTAL,
-                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
-                                          GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         zipButton1 = new JButton();
         zipButton1.setText("Zip...");
         rootPanel.add(zipButton1,
-                      new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(5, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
                                           GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         unzipButton1 = new JButton();
         unzipButton1.setText("Unzip...");
         rootPanel.add(unzipButton1,
-                      new GridConstraints(5, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
+                      new GridConstraints(6, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
                                           GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         zipButton2 = new JButton();
@@ -397,6 +422,56 @@ public class MainFormRunner {
                       new GridConstraints(2, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL,
                                           GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
                                           GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer3 = new Spacer();
+        rootPanel.add(spacer3,
+                      new GridConstraints(7, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1,
+                                          GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final Spacer spacer4 = new Spacer();
+        rootPanel.add(spacer4,
+                      new GridConstraints(3, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1,
+                                          GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final JScrollPane scrollPane1 = new JScrollPane();
+        rootPanel.add(scrollPane1,
+                      new GridConstraints(9, 0, 4, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          null, null, null, 0, false));
+        macMapList = new JList();
+        scrollPane1.setViewportView(macMapList);
+        final JScrollPane scrollPane2 = new JScrollPane();
+        rootPanel.add(scrollPane2,
+                      new GridConstraints(5, 0, 3, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          null, null, null, 0, false));
+        windowsNativeMapList = new JList();
+        scrollPane2.setViewportView(windowsNativeMapList);
+        final JScrollPane scrollPane3 = new JScrollPane();
+        rootPanel.add(scrollPane3,
+                      new GridConstraints(1, 0, 3, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW,
+                                          null, null, null, 0, false));
+        windowsJavaMapList = new JList();
+        scrollPane3.setViewportView(windowsJavaMapList);
+        zipButton = new JButton();
+        zipButton.setText("Zip...");
+        zipButton.setToolTipText("Create a ZIP file for the selected map");
+        rootPanel.add(zipButton,
+                      new GridConstraints(9, 3, 1, 1, GridConstraints.ANCHOR_NORTH, GridConstraints.FILL_HORIZONTAL,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                                          GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        unzipButton = new JButton();
+        unzipButton.setText("Unzip...");
+        unzipButton.setToolTipText("Install map from ZIP file into local saves (Mac)");
+        rootPanel.add(unzipButton,
+                      new GridConstraints(10, 3, 1, 1, GridConstraints.ANCHOR_NORTH, GridConstraints.FILL_HORIZONTAL,
+                                          GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                                          GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer5 = new Spacer();
+        rootPanel.add(spacer5,
+                      new GridConstraints(11, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1,
+                                          GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
     }
 
     /**
