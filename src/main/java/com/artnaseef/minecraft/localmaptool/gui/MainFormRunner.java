@@ -2,13 +2,12 @@ package com.artnaseef.minecraft.localmaptool.gui;
 
 import com.artnaseef.minecraft.localmaptool.MinecraftEnvironmentType;
 import com.artnaseef.minecraft.localmaptool.scan.MapLocationScanner;
+import com.artnaseef.minecraft.localmaptool.zip.ZipParameters;
+import com.artnaseef.minecraft.localmaptool.zip.ZipUtil;
+import com.artnaseef.minecraft.localmaptool.zip.impl.ZipUtilImpl;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-
-import net.lingala.zip4j.ZipFile;
-import net.lingala.zip4j.exception.ZipException;
-import net.lingala.zip4j.model.ZipParameters;
 
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Layout;
@@ -27,6 +26,9 @@ import java.io.IOException;
 import java.util.List;
 
 /**
+ * TODO: add some form of progress display
+ * TODO: asynchronous operation of zip/unzip (so display is not frozen)
+ *
  * Created by art on 6/28/2019.
  */
 public class MainFormRunner {
@@ -53,6 +55,7 @@ public class MainFormRunner {
     private JButton unzipButton2;
 
     private MapLocationScanner mapLocationScanner = new MapLocationScanner();
+    private ZipUtil zipUtil = new ZipUtilImpl();
 
     public MainFormRunner() {
         closeButton.addActionListener(new ActionListener() {
@@ -295,21 +298,18 @@ public class MainFormRunner {
                 }
 
                 if (doUnzip) {
-                    ZipFile zipFile = new ZipFile(sourceZip);
-//                    zipFile.getProgressMonitor();
-
                     try {
-                        zipFile.extractAll(destination.getPath());
+                        this.zipUtil.extractZip(sourceZip, destination, ZipParameters.DEFAULT);
 
                         // TODO: refresh the map list
                         this.startScan();
-                    } catch (ZipException exc) {
+                    } catch (IOException ioExc) {
                         JOptionPane
-                            .showMessageDialog(this.rootPanel, "Error occured during the unzip process: " + exc.getMessage(),
+                            .showMessageDialog(this.rootPanel, "Error occured during the unzip process: " + ioExc.getMessage(),
                                                "Unzip Error",
                                                JOptionPane.ERROR_MESSAGE);
 
-                        this.log.error("Error during the unzip process", exc);
+                        this.log.error("Error during the unzip process", ioExc);
                     }
                 }
             }
@@ -330,13 +330,8 @@ public class MainFormRunner {
         if (result == JFileChooser.APPROVE_OPTION) {
             zipFilePath = fileChooser.getSelectedFile();
 
-            ZipFile zipFile = new ZipFile(zipFilePath);
-
-            ZipParameters zipParameters = new ZipParameters();
-            zipParameters.setIncludeRootFolder(false);
-
             try {
-                zipFile.addFolder(directory, zipParameters);
+                this.zipUtil.createZip(zipFilePath, directory);
             } catch (Exception exc) {
                 // TODO: better handling
                 exc.printStackTrace();
