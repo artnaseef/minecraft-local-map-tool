@@ -8,6 +8,8 @@ import com.intellij.uiDesigner.core.Spacer;
 
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
+import net.lingala.zip4j.model.AbstractFileHeader;
+import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.model.ZipParameters;
 
 import org.apache.log4j.FileAppender;
@@ -25,6 +27,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by art on 6/28/2019.
@@ -233,34 +236,37 @@ public class MainFormRunner {
         //
         // Choose the ZIP source
         //
-        JFileChooser zipSourceChooser = new JFileChooser();
-        zipSourceChooser.setMultiSelectionEnabled(false);
-        FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("ZIP files", "zip");
+//        JFileChooser zipSourceChooser = new JFileChooser();
+//        zipSourceChooser.setMultiSelectionEnabled(false);
+//        FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("ZIP files", "zip");
+//
+//        zipSourceChooser.addChoosableFileFilter(zipFilter);
+//        zipSourceChooser.resetChoosableFileFilters();
+//        zipSourceChooser.setFileFilter(zipFilter);
+//
+//        zipSourceChooser.setDialogTitle("Choose source ZIP file");
+//        int sourceResult = zipSourceChooser.showOpenDialog(this.rootPanel);
+        File sourceZip = this.chooseSource();
 
-        zipSourceChooser.addChoosableFileFilter(zipFilter);
-        zipSourceChooser.resetChoosableFileFilters();
-        zipSourceChooser.setFileFilter(zipFilter);
-
-        zipSourceChooser.setDialogTitle("Choose source ZIP file");
-        int sourceResult = zipSourceChooser.showOpenDialog(this.rootPanel);
-
-        if (sourceResult == JFileChooser.APPROVE_OPTION) {
-            File sourceZip = zipSourceChooser.getSelectedFile();
+        if (sourceZip != null) {
+//            File sourceZip = zipSourceChooser.getSelectedFile();
 
             //
             // Choose the save location
             //
-            JFileChooser saveFolderChooser = new JFileChooser(saveFolderPath);
+            File destination = this.chooseDestinationFolder(saveFolderPath);
+//            JFileChooser saveFolderChooser = new JFileChooser(saveFolderPath);
+//
+//            File suggestedDestination = new File(saveFolderPath, "NewImportedWorld");
+//            saveFolderChooser.setSelectedFile(suggestedDestination);
+//            saveFolderChooser.setMultiSelectionEnabled(false);
+//            saveFolderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+//            saveFolderChooser.setDialogTitle("Choose destination folder");
+//            int destinationResult = saveFolderChooser.showSaveDialog(this.rootPanel);
 
-            File suggestedDestination = new File(saveFolderPath, "NewImportedWorld");
-            saveFolderChooser.setSelectedFile(suggestedDestination);
-            saveFolderChooser.setMultiSelectionEnabled(false);
-            saveFolderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            saveFolderChooser.setDialogTitle("Choose destination folder");
-            int destinationResult = saveFolderChooser.showSaveDialog(this.rootPanel);
-
-            if (destinationResult == JFileChooser.APPROVE_OPTION) {
-                File destination = saveFolderChooser.getSelectedFile();
+            if (destination != null) {
+//            if (destinationResult == JFileChooser.APPROVE_OPTION) {
+//                File destination = saveFolderChooser.getSelectedFile();
 
                 boolean doUnzip = false;
 
@@ -299,6 +305,10 @@ public class MainFormRunner {
 //                    zipFile.getProgressMonitor();
 
                     try {
+                        File chosenSourceRoot = this.selectMapRootInZip(zipFile);
+                        this.log.info("TBD: chosen root = {}", chosenSourceRoot);
+
+                        // TBD999: how to chose the root from the zip?  zip4j doesn't handle it as-is...
                         zipFile.extractAll(destination.getPath());
 
                         // TODO: refresh the map list
@@ -314,6 +324,99 @@ public class MainFormRunner {
                 }
             }
         }
+    }
+
+    private File chooseSource() {
+        JFileChooser zipSourceChooser = new JFileChooser();
+        zipSourceChooser.setMultiSelectionEnabled(false);
+        FileNameExtensionFilter zipFilter = new FileNameExtensionFilter("ZIP files", "zip");
+
+        zipSourceChooser.addChoosableFileFilter(zipFilter);
+        zipSourceChooser.resetChoosableFileFilters();
+        zipSourceChooser.setFileFilter(zipFilter);
+
+        zipSourceChooser.setDialogTitle("Choose source ZIP file");
+        int sourceResult = zipSourceChooser.showOpenDialog(this.rootPanel);
+
+        if (sourceResult == JFileChooser.APPROVE_OPTION) {
+            return zipSourceChooser.getSelectedFile();
+        }
+
+        return null;
+    }
+
+    private File chooseDestinationFolder(File startingSaveFolderPath) {
+        JFileChooser saveFolderChooser = new JFileChooser(startingSaveFolderPath);
+
+        File suggestedDestination = new File(startingSaveFolderPath, "NewImportedWorld");
+        saveFolderChooser.setSelectedFile(suggestedDestination);
+        saveFolderChooser.setMultiSelectionEnabled(false);
+        saveFolderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        saveFolderChooser.setDialogTitle("Choose destination folder");
+        int destinationResult = saveFolderChooser.showSaveDialog(this.rootPanel);
+
+        if (destinationResult == JFileChooser.APPROVE_OPTION) {
+            return saveFolderChooser.getSelectedFile();
+        }
+
+        return null;
+    }
+
+    private File selectMapRootInZip(ZipFile zipFile) throws ZipException {
+        List<FileHeader> fileHeaders = zipFile.getFileHeaders();
+        List<FileHeader> levelDatFiles =
+                fileHeaders
+                        .stream()
+                        .filter(this::fileHeaderIsLevelDatFile)
+                        .collect(Collectors.toList());
+
+        FileHeader resultHeader = null;
+
+        if (! levelDatFiles.isEmpty()) {
+            if (levelDatFiles.size() == 1) {
+                resultHeader = levelDatFiles.get(0);
+            } else {
+                String[] selections =
+                        levelDatFiles
+                                .stream()
+                                .map(AbstractFileHeader::getFileName)
+                                .toArray((size) -> new String[size]);
+
+                String result = (String) JOptionPane.showInputDialog(
+                        this.rootPanel,
+                        "Found more than one map in the ZIP file; please choose the source Map folder to use",
+                        "Choose Source Map Folder",
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        selections,
+                        selections[0]);
+
+                if (result != null) {
+                    return new File(result);
+                }
+            }
+        } else {
+            this.log.warn("Chosen source ZIP file does not contain any level.dat files; aborting unzip");
+            JOptionPane.showMessageDialog(this.rootPanel,
+                    "The selected ZIP file does not contain a level.data file; aborting", "Missing level.dat",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+
+        if (resultHeader != null) {
+            return new File(resultHeader.getFileName());
+        }
+
+        return null;
+    }
+
+    private boolean fileHeaderIsLevelDatFile(FileHeader fileHeader) {
+        File path = new File(fileHeader.getFileName());
+
+        if (path != null) {
+            return path.getName().equalsIgnoreCase("level.dat");
+        }
+
+        return false;
     }
 
     private void startZipPath(String path) {
