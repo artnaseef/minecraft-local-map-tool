@@ -2,7 +2,6 @@ package com.artnaseef.minecraft.localmaptool.zip.impl;
 
 import com.artnaseef.minecraft.localmaptool.zip.ZipParameters;
 import com.artnaseef.minecraft.localmaptool.zip.ZipUtil;
-import com.sun.istack.internal.Nullable;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -14,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -44,10 +45,10 @@ public class ZipUtilImpl implements ZipUtil {
     }
 
 //========================================
-// Processing
+// Processing Interface
 //----------------------------------------
 
-    public void extractZip(File zipFile, File destination, @Nullable ZipParameters zipParameters) throws IOException {
+    public void extractZip(File zipFile, File destination, ZipParameters zipParameters) throws IOException {
         ZipFile inputZipFile = new ZipFile(zipFile);
 
         Stream<? extends ZipEntry> inputStream = inputZipFile.stream();
@@ -75,6 +76,15 @@ public class ZipUtilImpl implements ZipUtil {
                 this.addToZip(zipOutputStream, source, source);
             }
         }
+    }
+
+    @Override
+    public List<? extends ZipEntry> readZipEntryList(File zipFile) throws IOException {
+        ZipFile reader = new ZipFile(zipFile);
+        List<? extends ZipEntry> result = Collections.list(reader.entries());
+        reader.close();
+
+        return result;
     }
 
 //========================================

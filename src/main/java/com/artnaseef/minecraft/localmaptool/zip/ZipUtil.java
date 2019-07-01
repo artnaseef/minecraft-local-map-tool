@@ -1,16 +1,15 @@
 package com.artnaseef.minecraft.localmaptool.zip;
 
-import com.sun.istack.internal.Nullable;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.function.Function;
-import java.util.zip.ZipException;
+import java.util.List;
+import java.util.zip.ZipEntry;
 
 /**
  * Created by art on 7/1/19.
  */
 public interface ZipUtil {
-    void extractZip(File zipFile, File destination, @Nullable ZipParameters zipParameters) throws IOException;
+    void extractZip(File zipFile, File destination, ZipParameters zipParameters) throws IOException;
     void createZip(File zipFile, File source) throws IOException;
+    List<? extends ZipEntry> readZipEntryList(File zipFile) throws IOException;
 }
