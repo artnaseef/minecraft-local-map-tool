@@ -28,6 +28,11 @@
             <artifactId>zip4j</artifactId>
             <version>2.0.2</version>
         </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
 
         <!-- https://stackoverflow.com/questions/19049253/intellij-idea-gui-designer-maven -->
         <dependency>
