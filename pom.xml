@@ -24,9 +24,30 @@
     <version>1.0.0-SNAPSHOT</version>
 
     <name>Minecraft Local Map Tool</name>
+    <url>http://github.com/artnaseef/minecraft-local-map-tool</url>
     <description>
         Tool for locating and managing local minecraft maps for multiple environments (Windows, Mac, Linux, etc).
     </description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Arthur Naseef</name>
+            <email>artnaseef@apache.org</email>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git@github.com:artnaseef/minecraft-local-map-tool.git</connection>
+        <developerConnection>scm:git:git@github.com:artnaseef/minecraft-local-map-tool.git</developerConnection>
+        <url>git@github.com:artnaseef/minecraft-local-map-tool.git</url>
+    </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -137,37 +158,64 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifact>maven-release-plugin</artifactId>
-                <version>2.5.2</version>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.3</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.10.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.4</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
-	<plugin>
-	  <groupId>org.apache.maven.plugins</groupId>
-	  <artifactId>maven-javadoc-plugin</artifactId>
-	  <version>2.10.3</version>
-	  <executions>
-	    <execution>
-	      <id>attach-javadocs</id>
-	      <goals>
-		<goal>jar</goal>
-	      </goals>
-	    </execution>
-	  </executions>
-	</plugin>
-
-	<plugin>
-	  <groupId>org.apache.maven.plugins</groupId>
-	  <artifactId>maven-source-plugin</artifactId>
-	  <version>2.4</version>
-	  <executions>
-	    <execution>
-	      <id>attach-sources</id>
-	      <goals>
-		<goal>jar</goal>
-	      </goals>
-	    </execution>
-	  </executions>
-	</plugin>
     </build>
 
     <distributionManagement>
