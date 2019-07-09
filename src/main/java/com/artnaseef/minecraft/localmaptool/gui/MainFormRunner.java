@@ -329,7 +329,6 @@ public class MainFormRunner {
                         // Empty destination; all good
                         doUnzip = true;
                     } else {
-                        // TODO: Verification dialog instead of guaranteed rejection
                         int confirmResult =
                             JOptionPane.showConfirmDialog(
                                 this.rootPanel,
@@ -372,7 +371,6 @@ public class MainFormRunner {
 
                             this.zipUtil.extractZip(sourceZip, destination, zipParameters);
 
-                            // TODO: refresh the map list
                             this.startScan();
                         }
                     } catch (IOException ioExc) {
@@ -508,7 +506,6 @@ public class MainFormRunner {
         File directory = new File(path);
         String name = directory.getName();
 
-        // TODO: prompt the user for the output location
         File zipFilePath = new File(directory.getParent(), name + ".zip");
 
         JFileChooser fileChooser = new JFileChooser(directory);

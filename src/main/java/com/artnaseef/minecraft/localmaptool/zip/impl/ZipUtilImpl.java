@@ -199,31 +199,6 @@ public class ZipUtilImpl implements ZipUtil {
         return finalLocation;
     }
 
-    // TBD999: remove temporary
-    public static void main(String[] args) {
-//        ZipUtilImpl impl = new ZipUtilImpl();
-//
-//        try {
-//            ZipParameters zipParameters = new ZipParameters();
-//            zipParameters.setIncludeEntryPredicate((entry) -> (! entry.getName().endsWith("2")));
-//            zipParameters.setMapDestinationFunction(
-//                (orig) -> new File(
-//                    new File(orig.getParentFile(), "xxx"),
-//                    orig.getName()));
-//            impl.extractZip(new File("/tmp/test.zip"), new File("/tmp/out"), zipParameters);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-
-        ZipUtilImpl impl = new ZipUtilImpl();
-
-        try {
-            impl.createZip(new File("/tmp/test2.zip"), new File("/tmp/junk"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
 //========================================
 // Internal Classes
 //----------------------------------------
